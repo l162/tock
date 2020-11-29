@@ -1,0 +1,14 @@
+[package]
+name = "stm32f4discovery"
+version = "0.1.0"
+authors = ["l162 <l162@hey.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+components = { path = "../components" }
+cortexm4 = { path = "../../arch/cortex-m4" }
+capsules = { path = "../../capsules" }
+kernel = { path = "../../kernel" }
+stm32f4 = { path = "../../chips/stm32f403xc" }

@@ -1,0 +1,12 @@
+[package]
+name = "stm32f4"
+version = "0.1.0"
+authors = ["Tock Project Developers <tock-dev@googlegroups.com>"]
+edition = "2018"
+
+[dependencies]
+cortexm4 = { path = "../../arch/cortex-m4" }
+enum_primitive = { path = "../../libraries/enum_primitive" }
+stm32f4xx = { path = "../stm32f4xx" }
+kernel = { path = "../../kernel" }
+tock-rt0 = { path = "../../libraries/tock-rt0" }
