@@ -1245,3 +1245,4 @@ impl<'a> hil::gpio::Interrupt<'a> for Pin<'a> {
             .map_or(false, |&mut lineid| self.exti.is_pending(lineid))
     }
 }
+

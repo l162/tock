@@ -23,6 +23,7 @@ pub struct Stm32f4xxDefaultPeripherals<'a> {
     pub adc1: crate::adc::Adc<'a>,
     pub dma_streams: [crate::dma1::Stream<'a>; 8],
     pub exti: &'a crate::exti::Exti<'a>,
+    pub flash: crate::flash::Flash,
     pub i2c1: crate::i2c::I2C<'a>,
     pub spi3: crate::spi::Spi<'a>,
     pub tim2: crate::tim2::Tim2<'a>,
@@ -42,6 +43,7 @@ impl<'a> Stm32f4xxDefaultPeripherals<'a> {
             adc1: crate::adc::Adc::new(rcc),
             dma_streams: crate::dma1::new_dma1_stream(dma),
             exti,
+            flash: crate::flash::Flash::new(),
             i2c1: crate::i2c::I2C::new(rcc),
             spi3: crate::spi::Spi::new(
                 crate::spi::SPI3_BASE,
@@ -123,6 +125,7 @@ impl<'a> InterruptService<DeferredCallTask> for Stm32f4xxDefaultPeripherals<'a> 
     unsafe fn service_deferred_call(&self, task: DeferredCallTask) -> bool {
         match task {
             DeferredCallTask::Fsmc => self.fsmc.handle_interrupt(),
+            DeferredCallTask::Flash => self.flash.handle_interrupt(),
         }
         true
     }

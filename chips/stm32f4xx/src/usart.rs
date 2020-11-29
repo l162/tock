@@ -144,6 +144,10 @@ register_bitfields![u32,
     ]
 ];
 
+/*
+const USART1_BASE: StaticRef<UsartRegisters> =
+    unsafe { StaticRef::new(0x40013800 as *const UsartRegisters) };
+*/
 pub const USART2_BASE: StaticRef<UsartRegisters> =
     unsafe { StaticRef::new(0x40004400 as *const UsartRegisters) };
 pub const USART3_BASE: StaticRef<UsartRegisters> =
