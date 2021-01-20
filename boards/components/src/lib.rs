@@ -1,9 +1,10 @@
 #![no_std]
-#![feature(const_in_array_repeat_expressions)]
 
 pub mod adc;
+pub mod adc_microphone;
 pub mod alarm;
 pub mod analog_comparator;
+pub mod app_flash_driver;
 pub mod bus;
 pub mod button;
 pub mod cdc;
@@ -17,12 +18,15 @@ pub mod fxos8700;
 pub mod gpio;
 pub mod hd44780;
 pub mod hmac;
+pub mod humidity;
 pub mod i2c;
 pub mod ieee802154;
 pub mod isl29035;
 pub mod l3gd20;
 pub mod led;
+pub mod led_matrix;
 pub mod lldb;
+pub mod lsm303agr;
 pub mod lsm303dlhc;
 pub mod mlx90614;
 pub mod mx25r6435f;
@@ -35,12 +39,15 @@ pub mod rng;
 pub mod sched;
 pub mod screen;
 pub mod segger_rtt;
+pub mod sht3x;
 pub mod si7021;
+pub mod sound_pressure;
 pub mod spi;
 pub mod st77xx;
 pub mod temperature;
 pub mod temperature_stm;
 pub mod test;
+pub mod text_screen;
 pub mod touch;
 pub mod udp_driver;
 pub mod udp_mux;

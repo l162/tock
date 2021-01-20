@@ -8,7 +8,6 @@
 // Disable this attribute when documenting, as a workaround for
 // https://github.com/rust-lang/rust/issues/62184.
 #![cfg_attr(not(doc), no_main)]
-#![feature(const_in_array_repeat_expressions)]
 
 use capsules::virtual_alarm::{MuxAlarm, VirtualMuxAlarm};
 use e310x::chip::E310xDefaultPeripherals;
@@ -258,5 +257,11 @@ pub unsafe fn reset_handler() {
 
     let scheduler = components::sched::cooperative::CooperativeComponent::new(&PROCESSES)
         .finalize(components::coop_component_helper!(NUM_PROCS));
-    board_kernel.kernel_loop(&hifive1, chip, None, scheduler, &main_loop_cap);
+    board_kernel.kernel_loop(
+        &hifive1,
+        chip,
+        None::<&kernel::ipc::IPC<NUM_PROCS>>,
+        scheduler,
+        &main_loop_cap,
+    );
 }

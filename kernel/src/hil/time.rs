@@ -273,21 +273,21 @@ pub trait Timer<'a>: Time {
     fn cancel(&self) -> ReturnCode;
 }
 
+/// 100MHz `Frequency`
+#[derive(Debug)]
+pub struct Freq100MHz;
+impl Frequency for Freq100MHz {
+    fn frequency() -> u32 {
+        100000000
+    }
+}
+
 /// 16MHz `Frequency`
 #[derive(Debug)]
 pub struct Freq16MHz;
 impl Frequency for Freq16MHz {
     fn frequency() -> u32 {
         16000000
-    }
-}
-
-/// 24.75MHz `Frequency`
-#[derive(Debug)]
-pub struct Freq2475MHz;
-impl Frequency for Freq2475MHz {
-    fn frequency() -> u32 {
-        24750000
     }
 }
 

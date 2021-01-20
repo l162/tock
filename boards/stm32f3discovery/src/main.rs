@@ -6,10 +6,9 @@
 // Disable this attribute when documenting, as a workaround for
 // https://github.com/rust-lang/rust/issues/62184.
 #![cfg_attr(not(doc), no_main)]
-#![feature(const_in_array_repeat_expressions)]
 #![deny(missing_docs)]
 
-use capsules::lsm303dlhc;
+use capsules::lsm303xx;
 use capsules::virtual_alarm::VirtualMuxAlarm;
 use components::gpio::GpioComponent;
 use kernel::capabilities;
@@ -54,7 +53,7 @@ pub static mut STACK_MEMORY: [u8; 0x1000] = [0; 0x1000];
 /// capsules for this platform.
 struct STM32F3Discovery {
     console: &'static capsules::console::Console<'static>,
-    ipc: kernel::ipc::IPC,
+    ipc: kernel::ipc::IPC<NUM_PROCS>,
     gpio: &'static capsules::gpio::GPIO<'static, stm32f303xc::gpio::Pin<'static>>,
     led: &'static capsules::led::LedDriver<
         'static,
@@ -616,13 +615,13 @@ pub unsafe fn reset_handler() {
         .finalize(components::lsm303dlhc_i2c_component_helper!(mux_i2c));
 
     lsm303dlhc.configure(
-        lsm303dlhc::Lsm303dlhcAccelDataRate::DataRate25Hz,
+        lsm303xx::Lsm303AccelDataRate::DataRate25Hz,
         false,
-        lsm303dlhc::Lsm303dlhcScale::Scale2G,
+        lsm303xx::Lsm303Scale::Scale2G,
         false,
         true,
-        lsm303dlhc::Lsm303dlhcMagnetoDataRate::DataRate3_0Hz,
-        lsm303dlhc::Lsm303dlhcRange::Range1_9G,
+        lsm303xx::Lsm303MagnetoDataRate::DataRate3_0Hz,
+        lsm303xx::Lsm303Range::Range1_9G,
     );
 
     let ninedof = components::ninedof::NineDofComponent::new(board_kernel)

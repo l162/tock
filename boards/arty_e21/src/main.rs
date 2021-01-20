@@ -4,7 +4,7 @@
 // Disable this attribute when documenting, as a workaround for
 // https://github.com/rust-lang/rust/issues/62184.
 #![cfg_attr(not(doc), no_main)]
-#![feature(const_fn, const_in_array_repeat_expressions)]
+#![feature(const_fn)]
 
 use arty_e21_chip::chip::ArtyExxDefaultPeripherals;
 use capsules::virtual_alarm::{MuxAlarm, VirtualMuxAlarm};
@@ -56,7 +56,7 @@ struct ArtyE21 {
         hil::led::LedHigh<'static, arty_e21_chip::gpio::GpioPin<'static>>,
     >,
     button: &'static capsules::button::Button<'static, arty_e21_chip::gpio::GpioPin<'static>>,
-    // ipc: kernel::ipc::IPC,
+    // ipc: kernel::ipc::IPC<NUM_PROCS>,
 }
 
 /// Mapping of integer syscalls to objects that implement syscalls.
@@ -92,7 +92,7 @@ pub unsafe fn reset_handler() {
 
     let chip = static_init!(
         arty_e21_chip::chip::ArtyExx<ArtyExxDefaultPeripherals>,
-        arty_e21_chip::chip::ArtyExx::new(peripherals)
+        arty_e21_chip::chip::ArtyExx::new(&peripherals.machinetimer, peripherals)
     );
     CHIP = Some(chip);
     chip.initialize();
@@ -249,5 +249,11 @@ pub unsafe fn reset_handler() {
 
     let scheduler = components::sched::priority::PriorityComponent::new(board_kernel).finalize(());
 
-    board_kernel.kernel_loop(&artye21, chip, None, scheduler, &main_loop_cap);
+    board_kernel.kernel_loop(
+        &artye21,
+        chip,
+        None::<&kernel::ipc::IPC<NUM_PROCS>>,
+        scheduler,
+        &main_loop_cap,
+    );
 }

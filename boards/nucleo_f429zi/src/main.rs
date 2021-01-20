@@ -6,7 +6,6 @@
 // Disable this attribute when documenting, as a workaround for
 // https://github.com/rust-lang/rust/issues/62184.
 #![cfg_attr(not(doc), no_main)]
-#![feature(const_in_array_repeat_expressions)]
 #![deny(missing_docs)]
 
 use capsules::virtual_alarm::VirtualMuxAlarm;
@@ -49,7 +48,7 @@ pub static mut STACK_MEMORY: [u8; 0x2000] = [0; 0x2000];
 /// capsules for this platform.
 struct NucleoF429ZI {
     console: &'static capsules::console::Console<'static>,
-    ipc: kernel::ipc::IPC,
+    ipc: kernel::ipc::IPC<NUM_PROCS>,
     led: &'static capsules::led::LedDriver<
         'static,
         LedHigh<'static, stm32f429zi::gpio::Pin<'static>>,

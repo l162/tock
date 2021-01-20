@@ -7,7 +7,6 @@
 // Disable this attribute when documenting, as a workaround for
 // https://github.com/rust-lang/rust/issues/62184.
 #![cfg_attr(not(doc), no_main)]
-#![feature(const_in_array_repeat_expressions)]
 #![deny(missing_docs)]
 
 use capsules::virtual_alarm::VirtualMuxAlarm;
@@ -71,7 +70,7 @@ struct Hail {
     led: &'static capsules::led::LedDriver<'static, LedLow<'static, sam4l::gpio::GPIOPin<'static>>>,
     button: &'static capsules::button::Button<'static, sam4l::gpio::GPIOPin<'static>>,
     rng: &'static capsules::rng::RngDriver<'static>,
-    ipc: kernel::ipc::IPC,
+    ipc: kernel::ipc::IPC<NUM_PROCS>,
     crc: &'static capsules::crc::Crc<'static, sam4l::crccu::Crccu<'static>>,
     dac: &'static capsules::dac::Dac<'static>,
 }

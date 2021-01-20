@@ -6,7 +6,6 @@
 // Disable this attribute when documenting, as a workaround for
 // https://github.com/rust-lang/rust/issues/62184.
 #![cfg_attr(not(doc), no_main)]
-#![feature(const_in_array_repeat_expressions)]
 #![deny(missing_docs)]
 
 use apollo3::chip::Apollo3DefaultPeripherals;
@@ -265,5 +264,11 @@ pub unsafe fn reset_handler() {
     let scheduler = components::sched::round_robin::RoundRobinComponent::new(&PROCESSES)
         .finalize(components::rr_component_helper!(NUM_PROCS));
 
-    board_kernel.kernel_loop(artemis_nano, chip, None, scheduler, &main_loop_cap);
+    board_kernel.kernel_loop(
+        artemis_nano,
+        chip,
+        None::<&kernel::ipc::IPC<NUM_PROCS>>,
+        scheduler,
+        &main_loop_cap,
+    );
 }

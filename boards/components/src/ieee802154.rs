@@ -13,6 +13,7 @@
 //!     &nrf52::aes::AESECB,
 //!     PAN_ID,
 //!     SRC_MAC,
+//!     deferred_caller,
 //! )
 //! .finalize(components::ieee802154_component_helper!(
 //!     nrf52::ieee802154_radio::Radio,
@@ -25,6 +26,7 @@ use capsules::ieee802154::device::MacDevice;
 use capsules::ieee802154::mac::{AwakeMac, Mac};
 use core::mem::MaybeUninit;
 use kernel::capabilities;
+use kernel::common::dynamic_deferred_call::DynamicDeferredCall;
 use kernel::component::Component;
 use kernel::hil::radio;
 use kernel::hil::symmetric_encryption::{self, AES128Ctr, AES128, AES128CBC, AES128CCM};
@@ -33,19 +35,19 @@ use kernel::{create_capability, static_init, static_init_half};
 // Setup static space for the objects.
 #[macro_export]
 macro_rules! ieee802154_component_helper {
-    ($R:ty, $A:ty) => {{
+    ($R:ty, $A:ty $(,)?) => {{
         use capsules::ieee802154::mac::AwakeMac;
         use core::mem::MaybeUninit;
         use kernel::hil::symmetric_encryption::{AES128Ctr, AES128, AES128CBC, AES128CCM};
 
-        static mut BUF1: MaybeUninit<capsules::aes_ccm::AES128CCM<'static, $A>> =
+        static mut BUF1: MaybeUninit<capsules::virtual_aes_ccm::VirtualAES128CCM<'static, $A>> =
             MaybeUninit::uninit();
         static mut BUF2: MaybeUninit<AwakeMac<'static, $R>> = MaybeUninit::uninit();
         static mut BUF3: MaybeUninit<
             capsules::ieee802154::framer::Framer<
                 'static,
                 AwakeMac<'static, $R>,
-                capsules::aes_ccm::AES128CCM<'static, $A>,
+                capsules::virtual_aes_ccm::VirtualAES128CCM<'static, $A>,
             >,
         > = MaybeUninit::uninit();
         (&mut BUF1, &mut BUF2, &mut BUF3)
@@ -58,9 +60,10 @@ pub struct Ieee802154Component<
 > {
     board_kernel: &'static kernel::Kernel,
     radio: &'static R,
-    aes: &'static A,
+    aes_mux: &'static capsules::virtual_aes_ccm::MuxAES128CCM<'static, A>,
     pan_id: capsules::net::ieee802154::PanID,
     short_addr: u16,
+    deferred_caller: &'static DynamicDeferredCall,
 }
 
 impl<
@@ -71,16 +74,18 @@ impl<
     pub fn new(
         board_kernel: &'static kernel::Kernel,
         radio: &'static R,
-        aes: &'static A,
+        aes_mux: &'static capsules::virtual_aes_ccm::MuxAES128CCM<'static, A>,
         pan_id: capsules::net::ieee802154::PanID,
         short_addr: u16,
+        deferred_caller: &'static DynamicDeferredCall,
     ) -> Self {
         Self {
             board_kernel,
             radio,
-            aes,
+            aes_mux,
             pan_id,
             short_addr,
+            deferred_caller,
         }
     }
 }
@@ -101,13 +106,13 @@ impl<
     > Component for Ieee802154Component<R, A>
 {
     type StaticInput = (
-        &'static mut MaybeUninit<capsules::aes_ccm::AES128CCM<'static, A>>,
+        &'static mut MaybeUninit<capsules::virtual_aes_ccm::VirtualAES128CCM<'static, A>>,
         &'static mut MaybeUninit<capsules::ieee802154::mac::AwakeMac<'static, R>>,
         &'static mut MaybeUninit<
             capsules::ieee802154::framer::Framer<
                 'static,
                 AwakeMac<'static, R>,
-                capsules::aes_ccm::AES128CCM<'static, A>,
+                capsules::virtual_aes_ccm::VirtualAES128CCM<'static, A>,
             >,
         >,
     );
@@ -121,12 +126,12 @@ impl<
 
         let aes_ccm = static_init_half!(
             static_buffer.0,
-            capsules::aes_ccm::AES128CCM<'static, A>,
-            capsules::aes_ccm::AES128CCM::new(self.aes, &mut CRYPT_BUF)
+            capsules::virtual_aes_ccm::VirtualAES128CCM<'static, A>,
+            capsules::virtual_aes_ccm::VirtualAES128CCM::new(self.aes_mux, &mut CRYPT_BUF)
         );
 
-        self.aes.set_client(aes_ccm);
-        self.aes.enable();
+        aes_ccm.setup();
+        self.aes_mux.enable();
 
         // Keeps the radio on permanently; pass-through layer
         let awake_mac = static_init_half!(
@@ -142,7 +147,7 @@ impl<
             capsules::ieee802154::framer::Framer<
                 'static,
                 AwakeMac<'static, R>,
-                capsules::aes_ccm::AES128CCM<'static, A>,
+                capsules::virtual_aes_ccm::VirtualAES128CCM<'static, A>,
             >,
             capsules::ieee802154::framer::Framer::new(awake_mac, aes_ccm)
         );
@@ -169,7 +174,8 @@ impl<
             capsules::ieee802154::RadioDriver::new(
                 userspace_mac,
                 self.board_kernel.create_grant(&grant_cap),
-                &mut RADIO_BUF
+                &mut RADIO_BUF,
+                self.deferred_caller,
             )
         );
 
@@ -179,6 +185,11 @@ impl<
         userspace_mac.set_receive_client(radio_driver);
         userspace_mac.set_pan(self.pan_id);
         userspace_mac.set_address(self.short_addr);
+        radio_driver.initialize_callback_handle(
+            self.deferred_caller
+                .register(radio_driver)
+                .expect("no deferred call slot available for ieee802154 driver"),
+        );
 
         (radio_driver, mux_mac)
     }

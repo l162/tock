@@ -26,7 +26,7 @@ macro_rules! led_component_helper {
         const NUM_LEDS: usize = count_expressions!($($L),+);
 
 	static_init!(
-	    [&'static mut $Led; NUM_LEDS],
+	    [&'static $Led; NUM_LEDS],
 	    [
 		$(
 		    static_init!(
@@ -41,7 +41,7 @@ macro_rules! led_component_helper {
 
 #[macro_export]
 macro_rules! led_component_buf {
-    ($Led:ty) => {{
+    ($Led:ty $(,)?) => {{
         use capsules::led::LedDriver;
         use core::mem::MaybeUninit;
         static mut BUF: MaybeUninit<LedDriver<'static, $Led>> = MaybeUninit::uninit();
@@ -50,11 +50,11 @@ macro_rules! led_component_buf {
 }
 
 pub struct LedsComponent<L: 'static + Led> {
-    leds: &'static mut [&'static mut L],
+    leds: &'static mut [&'static L],
 }
 
 impl<L: 'static + Led> LedsComponent<L> {
-    pub fn new(leds: &'static mut [&'static mut L]) -> Self {
+    pub fn new(leds: &'static mut [&'static L]) -> Self {
         Self { leds }
     }
 }

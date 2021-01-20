@@ -6,7 +6,6 @@
 // Disable this attribute when documenting, as a workaround for
 // https://github.com/rust-lang/rust/issues/62184.
 #![cfg_attr(not(doc), no_main)]
-#![feature(const_in_array_repeat_expressions)]
 
 use capsules::virtual_alarm::{MuxAlarm, VirtualMuxAlarm};
 use capsules::virtual_hmac::VirtualMuxHmac;
@@ -32,11 +31,12 @@ mod multi_alarm_test;
 pub mod io;
 pub mod usb;
 
+const NUM_PROCS: usize = 4;
+
 //
 // Actual memory for holding the active process structures. Need an empty list
 // at least.
-static mut PROCESSES: [Option<&'static dyn kernel::procs::ProcessType>; 4] =
-    [None, None, None, None];
+static mut PROCESSES: [Option<&'static dyn kernel::procs::ProcessType>; 4] = [None; NUM_PROCS];
 
 static mut CHIP: Option<
     &'static earlgrey::chip::EarlGrey<
@@ -332,5 +332,11 @@ pub unsafe fn reset_handler() {
     debug!("OpenTitan initialisation complete. Entering main loop");
 
     let scheduler = components::sched::priority::PriorityComponent::new(board_kernel).finalize(());
-    board_kernel.kernel_loop(&earlgrey_nexysvideo, chip, None, scheduler, &main_loop_cap);
+    board_kernel.kernel_loop(
+        &earlgrey_nexysvideo,
+        chip,
+        None::<&kernel::ipc::IPC<NUM_PROCS>>,
+        scheduler,
+        &main_loop_cap,
+    );
 }

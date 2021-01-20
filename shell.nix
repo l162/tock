@@ -33,11 +33,11 @@ let
   });
   moz_overlay = import (builtins.fetchTarball https://github.com/mozilla/nixpkgs-mozilla/archive/master.tar.gz);
   nixpkgs = import <nixpkgs> { overlays = [ moz_overlay ]; };
-  rust_date = "2020-10-25";
+  rust_date = "2021-01-07";
   rust_channel = "nightly";
   rust_targets = [
     "thumbv7em-none-eabi" "thumbv7em-none-eabihf" "thumbv6m-none-eabi"
-    "riscv32imac-unknown-none-elf" "riscv32imc-unknown-none-elf"
+    "riscv32imac-unknown-none-elf" "riscv32imc-unknown-none-elf" "riscv32i-unknown-none-elf"
   ];
   rust_build = nixpkgs.rustChannelOfTargets rust_channel rust_date rust_targets;
 in

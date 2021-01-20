@@ -65,14 +65,15 @@
 // https://github.com/rust-lang/rust/issues/62184.
 #![cfg_attr(not(doc), no_main)]
 #![deny(missing_docs)]
-#![feature(const_in_array_repeat_expressions)]
 
 use capsules::net::ieee802154::MacAddress;
 use capsules::net::ipv6::ip_utils::IPAddr;
+use capsules::virtual_aes_ccm::MuxAES128CCM;
 use capsules::virtual_alarm::VirtualMuxAlarm;
 use kernel::common::dynamic_deferred_call::{DynamicDeferredCall, DynamicDeferredCallClientState};
 use kernel::component::Component;
 use kernel::hil::led::LedLow;
+use kernel::hil::symmetric_encryption::AES128;
 use kernel::hil::time::Counter;
 #[allow(unused_imports)]
 use kernel::hil::usb::Client;
@@ -161,7 +162,7 @@ pub struct Platform {
     >,
     rng: &'static capsules::rng::RngDriver<'static>,
     temp: &'static capsules::temperature::TemperatureSensor<'static>,
-    ipc: kernel::ipc::IPC,
+    ipc: kernel::ipc::IPC<NUM_PROCS>,
     analog_comparator: &'static capsules::analog_comparator::AnalogComparator<
         'static,
         nrf52840::acomp::Comparator<'static>,
@@ -235,22 +236,22 @@ pub unsafe fn reset_handler() {
         board_kernel,
         components::gpio_component_helper!(
             nrf52840::gpio::GPIOPin,
-            0 => &base_peripherals.gpio_port[Pin::P1_01],
-            1 => &base_peripherals.gpio_port[Pin::P1_02],
-            2 => &base_peripherals.gpio_port[Pin::P1_03],
-            3 => &base_peripherals.gpio_port[Pin::P1_04],
-            4 => &base_peripherals.gpio_port[Pin::P1_05],
-            5 => &base_peripherals.gpio_port[Pin::P1_06],
-            6 => &base_peripherals.gpio_port[Pin::P1_07],
-            7 => &base_peripherals.gpio_port[Pin::P1_08],
-            8 => &base_peripherals.gpio_port[Pin::P1_10],
-            9 => &base_peripherals.gpio_port[Pin::P1_11],
-            10 => &base_peripherals.gpio_port[Pin::P1_12],
-            11 => &base_peripherals.gpio_port[Pin::P1_13],
-            12 => &base_peripherals.gpio_port[Pin::P1_14],
-            13 => &base_peripherals.gpio_port[Pin::P1_15],
-            14 => &base_peripherals.gpio_port[Pin::P0_26],
-            15 => &base_peripherals.gpio_port[Pin::P0_27]
+            0 => &nrf52840_peripherals.gpio_port[Pin::P1_01],
+            1 => &nrf52840_peripherals.gpio_port[Pin::P1_02],
+            2 => &nrf52840_peripherals.gpio_port[Pin::P1_03],
+            3 => &nrf52840_peripherals.gpio_port[Pin::P1_04],
+            4 => &nrf52840_peripherals.gpio_port[Pin::P1_05],
+            5 => &nrf52840_peripherals.gpio_port[Pin::P1_06],
+            6 => &nrf52840_peripherals.gpio_port[Pin::P1_07],
+            7 => &nrf52840_peripherals.gpio_port[Pin::P1_08],
+            8 => &nrf52840_peripherals.gpio_port[Pin::P1_10],
+            9 => &nrf52840_peripherals.gpio_port[Pin::P1_11],
+            10 => &nrf52840_peripherals.gpio_port[Pin::P1_12],
+            11 => &nrf52840_peripherals.gpio_port[Pin::P1_13],
+            12 => &nrf52840_peripherals.gpio_port[Pin::P1_14],
+            13 => &nrf52840_peripherals.gpio_port[Pin::P1_15],
+            14 => &nrf52840_peripherals.gpio_port[Pin::P0_26],
+            15 => &nrf52840_peripherals.gpio_port[Pin::P0_27]
         ),
     )
     .finalize(components::gpio_component_buf!(nrf52840::gpio::GPIOPin));
@@ -260,22 +261,22 @@ pub unsafe fn reset_handler() {
         components::button_component_helper!(
             nrf52840::gpio::GPIOPin,
             (
-                &base_peripherals.gpio_port[BUTTON1_PIN],
+                &nrf52840_peripherals.gpio_port[BUTTON1_PIN],
                 kernel::hil::gpio::ActivationMode::ActiveLow,
                 kernel::hil::gpio::FloatingState::PullUp
             ), //13
             (
-                &base_peripherals.gpio_port[BUTTON2_PIN],
+                &nrf52840_peripherals.gpio_port[BUTTON2_PIN],
                 kernel::hil::gpio::ActivationMode::ActiveLow,
                 kernel::hil::gpio::FloatingState::PullUp
             ), //14
             (
-                &base_peripherals.gpio_port[BUTTON3_PIN],
+                &nrf52840_peripherals.gpio_port[BUTTON3_PIN],
                 kernel::hil::gpio::ActivationMode::ActiveLow,
                 kernel::hil::gpio::FloatingState::PullUp
             ), //15
             (
-                &base_peripherals.gpio_port[BUTTON4_PIN],
+                &nrf52840_peripherals.gpio_port[BUTTON4_PIN],
                 kernel::hil::gpio::ActivationMode::ActiveLow,
                 kernel::hil::gpio::FloatingState::PullUp
             ) //16
@@ -285,10 +286,10 @@ pub unsafe fn reset_handler() {
 
     let led = components::led::LedsComponent::new(components::led_component_helper!(
         LedLow<'static, nrf52840::gpio::GPIOPin>,
-        LedLow::new(&base_peripherals.gpio_port[LED1_PIN]),
-        LedLow::new(&base_peripherals.gpio_port[LED2_PIN]),
-        LedLow::new(&base_peripherals.gpio_port[LED3_PIN]),
-        LedLow::new(&base_peripherals.gpio_port[LED4_PIN]),
+        LedLow::new(&nrf52840_peripherals.gpio_port[LED1_PIN]),
+        LedLow::new(&nrf52840_peripherals.gpio_port[LED2_PIN]),
+        LedLow::new(&nrf52840_peripherals.gpio_port[LED3_PIN]),
+        LedLow::new(&nrf52840_peripherals.gpio_port[LED4_PIN]),
     ))
     .finalize(components::led_component_buf!(
         LedLow<'static, nrf52840::gpio::GPIOPin>
@@ -304,6 +305,7 @@ pub unsafe fn reset_handler() {
         false,
         BUTTON_RST_PIN,
         nrf52840::uicr::Regulator0Output::DEFAULT,
+        &base_peripherals.nvmc,
     )
     .finalize(());
 
@@ -313,7 +315,7 @@ pub unsafe fn reset_handler() {
         create_capability!(capabilities::ProcessManagementCapability);
     let main_loop_capability = create_capability!(capabilities::MainLoopCapability);
     let memory_allocation_capability = create_capability!(capabilities::MemoryAllocationCapability);
-    let gpio_port = &base_peripherals.gpio_port;
+    let gpio_port = &nrf52840_peripherals.gpio_port;
     // Configure kernel debug gpios as early as possible
     kernel::debug::assign_gpios(
         Some(&gpio_port[LED1_PIN]),
@@ -336,7 +338,7 @@ pub unsafe fn reset_handler() {
     .finalize(());
 
     let dynamic_deferred_call_clients =
-        static_init!([DynamicDeferredCallClientState; 2], Default::default());
+        static_init!([DynamicDeferredCallClientState; 3], Default::default());
     let dynamic_deferred_caller = static_init!(
         DynamicDeferredCall,
         DynamicDeferredCall::new(dynamic_deferred_call_clients)
@@ -361,15 +363,27 @@ pub unsafe fn reset_handler() {
         nrf52_components::BLEComponent::new(board_kernel, &base_peripherals.ble_radio, mux_alarm)
             .finalize(());
 
+    let aes_mux = static_init!(
+        MuxAES128CCM<'static, nrf52840::aes::AesECB>,
+        MuxAES128CCM::new(&base_peripherals.ecb, dynamic_deferred_caller)
+    );
+    base_peripherals.ecb.set_client(aes_mux);
+    aes_mux.initialize_callback_handle(
+        dynamic_deferred_caller
+            .register(aes_mux)
+            .expect("no deferred call slot available for ccm mux"),
+    );
+
     let serial_num = nrf52840::ficr::FICR_INSTANCE.address();
     let serial_num_bottom_16 = serial_num[0] as u16 + ((serial_num[1] as u16) << 8);
     let src_mac_from_serial_num: MacAddress = MacAddress::Short(serial_num_bottom_16);
     let (ieee802154_radio, mux_mac) = components::ieee802154::Ieee802154Component::new(
         board_kernel,
         &base_peripherals.ieee802154_radio,
-        &base_peripherals.ecb,
+        aes_mux,
         PAN_ID,
         serial_num_bottom_16,
+        dynamic_deferred_caller,
     )
     .finalize(components::ieee802154_component_helper!(
         nrf52840::ieee802154_radio::Radio,
@@ -473,7 +487,7 @@ pub unsafe fn reset_handler() {
         nrf52840::acomp::Comparator
     ));
 
-    nrf52_components::NrfClockComponent::new().finalize(());
+    nrf52_components::NrfClockComponent::new(&base_peripherals.clock).finalize(());
 
     // let alarm_test_component =
     //     components::test::multi_alarm_test::MultiAlarmTestComponent::new(&mux_alarm).finalize(

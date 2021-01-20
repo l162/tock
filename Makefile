@@ -198,8 +198,8 @@ ci-nosetup:
 .PHONY: prepush
 prepush:\
 	format\
-	ci-job-syntax\
-	ci-job-clippy
+	ci-job-clippy\
+	ci-job-syntax
 	$(call banner,Pre-Push checks all passed!)
 	# Note: Tock runs additional and more intense CI checks on all PRs.
 	# If one of these error, you can run `make ci-job-NAME` to test locally.
@@ -334,20 +334,20 @@ ci-job-clippy:
 
 define ci_setup_markdown_toc
 	$(call banner,CI-Setup: Install markdown-toc)
-	npm install -g markdown-toc
+	npm install markdown-toc
 endef
 
 .PHONY: ci-setup-markdown-toc
 ci-setup-markdown-toc:
 	$(call ci_setup_helper,\
-		command -v markdown-toc,\
-		npm install -g markdown-toc,\
+		PATH="node_modules/.bin:${PATH}" command -v markdown-toc,\
+		npm install markdown-toc,\
 		ci_setup_markdown_toc,\
 		CI_JOB_MARKDOWN)
 
 define ci_job_markdown_toc
 	$(call banner,CI-Job: Markdown Table of Contents Validation)
-	@CI=true tools/toc.sh
+	@CI=true PATH="node_modules/.bin:${PATH}" tools/toc.sh
 endef
 
 .PHONY: ci-job-markdown-toc
@@ -514,7 +514,7 @@ define ci_setup_qemu_opentitan
 	@pwd=$$(pwd) && \
 		temp=$$(mktemp -d) && \
 		cd $$temp && \
-		curl 'https://storage.googleapis.com/artifacts.opentitan.org/opentitan-snapshot-20191101-1-2744-g528004a3.tar.xz' \
+		curl 'https://storage.googleapis.com/artifacts.opentitan.org/opentitan-snapshot-20191101-1-3845-g000a18cb6.tar.xz' \
 			--output opentitan-dist.tar.xz; \
 		tar -xf opentitan-dist.tar.xz; \
 		mv opentitan-snapshot-20191101-*/sw/device/boot_rom/boot_rom_fpga_nexysvideo.elf $$pwd/tools/qemu-runner/opentitan-boot-rom.elf
